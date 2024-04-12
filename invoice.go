@@ -473,6 +473,8 @@ func Invoices(token string) (InvoicesReturn, error) {
 // NewInvoice to create a new invoice
 func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 
+	//log.Println("Create invoice")
+
 	// Define client
 	client := &http.Client{}
 
@@ -505,6 +507,8 @@ func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 		return NewInvoiceReturn{}, err
 	}
 
+	//log.Println("Request created")
+
 	// Set header
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Authorization", config.Token)
@@ -514,6 +518,8 @@ func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 	if err != nil {
 		return NewInvoiceReturn{}, err
 	}
+
+	//log.Println("Response received")
 
 	// Close response
 	defer response.Body.Close()
@@ -525,6 +531,8 @@ func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 	if err != nil {
 		return NewInvoiceReturn{}, err
 	}
+
+	//log.Println("Decode: ", decode)
 
 	// Return data
 	return decode, nil
