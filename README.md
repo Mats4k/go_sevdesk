@@ -4,7 +4,7 @@ With this small library we want to simplify the handling of the sevDesk Api. Cur
 ## Install
 
 ```console
-go get github.com/gowizzard/sevdesk
+go get github.com/Mats4k/go_sevdesk
 ```
 
 ## How to use?
@@ -169,6 +169,3 @@ if err != nil {
     fmt.Println("Error: ", err)
 }
 ```
-
-## Help
-If you have any questions or comments, please contact us by e-mail at [jonas.kwiedor@jj-ideenschmiede.de](mailto:jonas.kwiedor@jj-ideenschmiede.de)

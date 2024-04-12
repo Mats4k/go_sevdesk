@@ -1,3 +1,3 @@
-module github.com/jojojojonas/sevdesk
+module github.com/Mats4k/go_sevdesk
 
-go 1.15
+go 1.21
