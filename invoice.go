@@ -9,7 +9,7 @@
 //
 //**********************************************************
 
-package sevdesk
+package go_sevdesk
 
 import (
 	"encoding/json"
