@@ -14,7 +14,7 @@ You can currently only create invoices and items in the invoices. For this purpo
 It is now possible to read out the invoices. This is done in a very simple way. You use the following function with your user token and get back an object with slices.
 
 ```go
-invoices, err := sevdesk.Invoices("token")
+invoices, err := go_sevdesk.Invoices("token")
 if err != nil {
 fmt.Println("Error: ", err)
 }
@@ -26,7 +26,7 @@ fmt.Println(invoices)
 Here you will find an example how to create a new invoice in sevDesk.
 
 ```go
-invoice, err := sevdesk.NewInvoice(sevdesk.Invoice{"contactID", "address", "invoiceDate", "status", "invoiceType", "contactPerson", "subject", "headText", "footText", "token"})
+invoice, err := go_sevdesk.NewInvoice(go_sevdesk.Invoice{"contactID", "address", "invoiceDate", "status", "invoiceType", "contactPerson", "subject", "headText", "footText", "token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
@@ -45,7 +45,7 @@ For this I have worked it all out as follows. The funny thing is that the ID doe
 In sevDesk the price is transferred in gross, therefore we have added a calculation of the gross value to the function. So you set the net value + the VAT in the function.
 
 ```go
-position, err := sevdesk.NewPosition(sevdesk.Position{"45", "1", "16", "Backups", "Backups of all Websites", "9", "invoiceID", "token"})
+position, err := go_sevdesk.NewPosition(go_sevdesk.Position{"45", "1", "16", "Backups", "Backups of all Websites", "9", "invoiceID", "token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
@@ -61,7 +61,7 @@ When using this function, an email is sent directly to the specified email addre
 
 ```go
 // Send email
-email, err := sevdesk.SendInvoiceEmail(sevdesk.InvoiceEmail{invoice.Objects.ID, "email", "subject", "text", "cc", "bcc", "token"})
+email, err := go_sevdesk.SendInvoiceEmail(go_sevdesk.InvoiceEmail{invoice.Objects.ID, "email", "subject", "text", "cc", "bcc", "token"})
 if err != nil {
     fmt.Println(err)
 }
@@ -71,7 +71,7 @@ if err != nil {
 In order to download an invoice, the status must first be changed to sent. You can do this with the following function.
 
 ```go
-sendInvoice, err := sevdesk.SendInvoicePDF(sevdesk.SendInvoice{invoice.Objects.ID, "VPDF", "false", "token"})
+sendInvoice, err := go_sevdesk.SendInvoicePDF(go_sevdesk.SendInvoice{invoice.Objects.ID, "VPDF", "false", "token"})
 if err != nil {
 fmt.Println(err)
 }
@@ -81,7 +81,7 @@ fmt.Println(err)
 When the invoice has been marked as sent, it can be downloaded. The data will be returned as bytes.
 
 ```go
-download, err := sevdesk.DownloadInvoicePDF(sevdesk.DownloadInvoice{invoice.Objects.ID, "true", "true", "token"})
+download, err := go_sevdesk.DownloadInvoicePDF(go_sevdesk.DownloadInvoice{invoice.Objects.ID, "true", "true", "token"})
 if err != nil {
     fmt.Println(err)
 }
@@ -92,7 +92,7 @@ if err != nil {
 If you want to read out all customers, then it goes as follows:
 
 ```go
-contacts, err := sevdesk.Contacts("token")
+contacts, err := go_sevdesk.Contacts("token")
 if err != nil {
 	fmt.Println("Error: ", err)
 }
@@ -103,7 +103,7 @@ if err != nil {
 If you want to set a new Contact, then this goes as follows. Some attributes are needed for this. The category[id] must be set. The best is a 3. Otherwise the other fields are free. The token must be specified of course.
 
 ```go
-contact, err := sevdesk.NewContact(sevdesk.Contact{"Name", "Name2", "Surname", "Familyname", "Vat number", "Tax number", "Bank account", "Bank number", "CategoryID", "token"})
+contact, err := go_sevdesk.NewContact(go_sevdesk.Contact{"Name", "Name2", "Surname", "Familyname", "Vat number", "Tax number", "Bank account", "Bank number", "CategoryID", "token"})
 if err != nil {
 	fmt.Println("Error: ", err)
 }
@@ -120,7 +120,7 @@ For each newly created contact, additional information about the contact can be 
 If you want to add an address, this is how to do it:
 
 ```go
-address, err := sevdesk.NewAddress(sevdesk.Address{"Street", "Zip", "City", "ContactID", "Token"})
+address, err := go_sevdesk.NewAddress(go_sevdesk.Address{"Street", "Zip", "City", "ContactID", "Token"})
 if err != nil {
 	fmt.Println("Error: ", err)
 }
@@ -131,7 +131,7 @@ if err != nil {
 If you want to add an email, then this goes as follows:
 
 ```go
-email, err := sevdesk.NewEmail(sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
+email, err := go_sevdesk.NewEmail(go_sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
@@ -142,7 +142,7 @@ if err != nil {
 If you want to add a phone number, this is how to do it:
 
 ```go
-phone, err := sevdesk.NewPhone(sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
+phone, err := go_sevdesk.NewPhone(go_sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
@@ -153,7 +153,7 @@ if err != nil {
 If you want to add a mobile number, this is how to do it:
 
 ```go
-mobile, err := sevdesk.NewMobile(sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
+mobile, err := go_sevdesk.NewMobile(go_sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
@@ -164,7 +164,7 @@ if err != nil {
 If you want to add a website, this is how to do it:
 
 ```go
-website, err := sevdesk.NewWebsite(sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
+website, err := go_sevdesk.NewWebsite(go_sevdesk.Communication{"Key", "Value", "ContactID", "Token"})
 if err != nil {
     fmt.Println("Error: ", err)
 }
