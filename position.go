@@ -142,7 +142,7 @@ type InvoicePositionObjects struct {
 	SumDiscountGrossForeignCurrency     int        `json:"sumDiscountGrossForeignCurrency"`
 }
 
-// To create new
+// To create new position // DEPRECATED - DO NOT USE IN SYSTEM V2
 func NewPosition(config Position) (PositionReturn, error) {
 
 	// Convert string to float64

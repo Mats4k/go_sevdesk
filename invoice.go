@@ -14,24 +14,26 @@ package go_sevdesk
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
 // Invoice for the data that the function uses
 type Invoice struct {
-	ContactID     string
-	Address       string
-	InvoiceDate   string
-	Status        string
-	InvoiceType   string
-	ContactPerson string
-	Subject       string
-	Headtext      string
-	FootText      string
-	Token         string
+	ContactID       string
+	Address         string
+	InvoiceDate     string
+	Status          string
+	InvoiceType     string
+	ContactPerson   string
+	Subject         string
+	Headtext        string
+	FootText        string
+	Token           string
+	IsEInvoice      bool
+	PaymentMethodId string
 }
 
 // InvoicesReturn to return the data from invoices
@@ -122,13 +124,14 @@ type ObjectName struct {
 
 // InvoiceEmail is to send invoice by email
 type InvoiceEmail struct {
-	ID      string
-	Email   string
-	Subject string
-	Text    string
-	CC      string
-	BCC     string
-	Token   string
+	ID          string
+	Email       string
+	Subject     string
+	Text        string
+	CC          string
+	BCC         string
+	Token       string
+	SendOnlyXML bool
 }
 
 // SendInvoiceEmailReturn is to decode json data
@@ -170,6 +173,7 @@ type SendInvoiceEmailObject struct {
 	AddressStreet                       interface{} `json:"addressStreet"`
 	AddressZip                          interface{} `json:"addressZip"`
 	AddressCity                         interface{} `json:"addressCity"`
+	AddressCountry                      ObjectName  `json:"addressCountry"`
 	PayDate                             interface{} `json:"payDate"`
 	CreateUser                          ObjectName  `json:"createUser"`
 	DeliveryDate                        string      `json:"deliveryDate"`
@@ -177,6 +181,7 @@ type SendInvoiceEmailObject struct {
 	SmallSettlement                     string      `json:"smallSettlement"`
 	ContactPerson                       ObjectName  `json:"contactPerson"`
 	TaxRate                             string      `json:"taxRate"`
+	TaxRule                             ObjectName  `json:"taxRule"`
 	TaxText                             string      `json:"taxText"`
 	DunningLevel                        interface{} `json:"dunningLevel"`
 	AddressParentName                   interface{} `json:"addressParentName"`
@@ -440,7 +445,7 @@ func Invoices(token string) (InvoicesReturn, error) {
 	client := &http.Client{}
 
 	// New http request
-	request, err := http.NewRequest("GET", "https://my.sevdesk.de/api/v1/Invoice", nil)
+	request, err := http.NewRequest("GET", buildURL("Invoice"), nil)
 	if err != nil {
 		return InvoicesReturn{}, err
 	}
@@ -471,7 +476,7 @@ func Invoices(token string) (InvoicesReturn, error) {
 }
 
 // NewInvoice to create a new invoice
-func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
+func NewInvoice(config Invoice, posConfigs []Position) (NewInvoiceReturn, error) {
 
 	//log.Println("Create invoice")
 
@@ -493,16 +498,53 @@ func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 	body.Set("currency", "EUR")
 	body.Set("mapAll", "true")
 	body.Set("objectName", "Invoice")
-	body.Set("discount", "false")
+	body.Set("discount", "0")
 	body.Set("contactPerson[id]", config.ContactPerson)
 	body.Set("contactPerson[objectName]", "SevUser")
 	body.Set("taxType", "default")
 	body.Set("taxRate", "")
+	body.Set("taxRule[id]", "1")
+	body.Set("taxRule[objectName]", "TaxRule")
 	body.Set("taxText", "0")
 	body.Set("showNet", "false")
+	body.Set("paymentMethod[id]", config.PaymentMethodId)
+	body.Set("paymentMethod[objectName]", "PaymentMethod")
+
+	if config.IsEInvoice {
+		body.Set("isEInvoice", "true")
+	} else {
+		body.Set("isEInvoice", "false")
+	}
+
+	for i, pos := range posConfigs {
+		// Convert string to float64
+		priceNet, err := strconv.ParseFloat(pos.PriceNet, 64)
+		if err != nil {
+			return NewInvoiceReturn{}, err
+		}
+
+		// Convert taxRate from string to float64
+		taxRate, err := strconv.ParseFloat(pos.TaxRate, 64)
+		if err != nil {
+			return NewInvoiceReturn{}, err
+		}
+
+		// Calc gross
+		priceGross := priceNet + (priceNet * taxRate / 100)
+
+		body.Set(fmt.Sprintf("invoicePosSave[%d][price]", i), fmt.Sprintf("%.2f", priceGross))
+		body.Set(fmt.Sprintf("invoicePosSave[%d][quantity]", i), pos.Quantity)
+		body.Set(fmt.Sprintf("invoicePosSave[%d][taxRate]", i), pos.TaxRate)
+		body.Set(fmt.Sprintf("invoicePosSave[%d][name]", i), pos.Name)
+		body.Set(fmt.Sprintf("invoicePosSave[%d][text]", i), pos.Description)
+		body.Set(fmt.Sprintf("invoicePosSave[%d][unity][id]", i), pos.UnityID)
+		body.Set(fmt.Sprintf("invoicePosSave[%d][unity][objectName]", i), "Unity")
+		body.Set(fmt.Sprintf("invoicePosSave[%d][objectName]", i), "InvoicePos")
+		body.Set(fmt.Sprintf("invoicePosSave[%d][mapAll]", i), "true")
+	}
 
 	// New http request
-	request, err := http.NewRequest("POST", "https://my.sevdesk.de/api/v1/Invoice", strings.NewReader(body.Encode()))
+	request, err := http.NewRequest("POST", buildURL("Invoice/Factory/saveInvoice"), strings.NewReader(body.Encode()))
 	if err != nil {
 		return NewInvoiceReturn{}, err
 	}
@@ -539,49 +581,6 @@ func NewInvoice(config Invoice) (NewInvoiceReturn, error) {
 
 }
 
-// SendInvoicePDF to send pdf
-func SendInvoicePDF(config SendInvoice) (SendInvoiceReturn, error) {
-
-	// Define client
-	client := &http.Client{}
-
-	// Define body data
-	body := url.Values{}
-	body.Set("sendType", config.SendType)
-	body.Set("sendDraft", config.SendDraft)
-
-	// New http request
-	request, err := http.NewRequest("PUT", fmt.Sprintf("https://my.sevdesk.de/api/v1/Invoice/%s/sendBy", config.ID), strings.NewReader(body.Encode()))
-	if err != nil {
-		return SendInvoiceReturn{}, err
-	}
-
-	// Set header
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	request.Header.Set("Authorization", config.Token)
-
-	// Response to sevDesk
-	response, err := client.Do(request)
-	if err != nil {
-		return SendInvoiceReturn{}, err
-	}
-
-	// Close response
-	defer response.Body.Close()
-
-	// Decode data
-	var decode SendInvoiceReturn
-
-	err = json.NewDecoder(response.Body).Decode(&decode)
-	if err != nil {
-		return SendInvoiceReturn{}, err
-	}
-
-	// Return data
-	return decode, nil
-
-}
-
 // SendInvoiceEmail to send an invoice by mail
 func SendInvoiceEmail(config InvoiceEmail) (SendInvoiceEmailReturn, error) {
 
@@ -598,8 +597,14 @@ func SendInvoiceEmail(config InvoiceEmail) (SendInvoiceEmailReturn, error) {
 	body.Set("ccEmail", config.CC)
 	body.Set("bccEmail", config.BCC)
 
+	if config.SendOnlyXML {
+		body.Set("sendXml", "true")
+	} else {
+		body.Set("sendXml", "false")
+	}
+
 	// New http request
-	request, err := http.NewRequest("POST", fmt.Sprintf("https://my.sevdesk.de/api/v1/Invoice/%s/sendViaEmail", config.ID), strings.NewReader(body.Encode()))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/Invoice/%s/sendViaEmail", ApiURL, config.ID), strings.NewReader(body.Encode()))
 	if err != nil {
 		return SendInvoiceEmailReturn{}, err
 	}
@@ -627,40 +632,5 @@ func SendInvoiceEmail(config InvoiceEmail) (SendInvoiceEmailReturn, error) {
 
 	// Return data
 	return decode, nil
-
-}
-
-func DownloadInvoicePDF(config DownloadInvoice) ([]byte, error) {
-
-	// Define client
-	client := &http.Client{}
-
-	// New http request
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://my.sevdesk.de/api/v1/Invoice/%s/getPdf?preventSendBy=%s&download=%s", config.ID, config.PreventSendBy, config.Download), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set header
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	request.Header.Set("Authorization", config.Token)
-
-	// Response to sevDesk
-	response, err := client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-
-	// Close response
-	defer response.Body.Close()
-
-	// Read body data
-	read, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return data
-	return read, nil
 
 }
