@@ -14,8 +14,8 @@ package go_sevdesk
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -38,15 +38,18 @@ type Invoice struct {
 
 // InvoicesReturn to return the data from invoices
 type InvoicesReturn struct {
-	Objects []InvoiceObjects `json:"objects"`
+	Objects []InvoiceObject `json:"objects"`
 }
 
-// NewInvoiceReturn is for returning the data
 type NewInvoiceReturn struct {
-	Objects InvoiceObjects `json:"objects"`
+	Objects NewInvoiceObjects `json:"objects"`
 }
 
-type InvoiceObjects struct {
+type NewInvoiceObjects struct {
+	Invoice InvoiceObject `json:"invoice"`
+}
+
+type InvoiceObject struct {
 	ID                                  string     `json:"id"`
 	ObjectName                          string     `json:"objectName"`
 	AdditionalInformation               string     `json:"additionalInformation"`
@@ -476,92 +479,184 @@ func Invoices(token string) (InvoicesReturn, error) {
 }
 
 // NewInvoice to create a new invoice
-func NewInvoice(config Invoice, posConfigs []Position) (NewInvoiceReturn, error) {
+func NewInvoice(config Invoice, posConfigs []Position) (InvoiceObject, error) {
 
 	//log.Println("Create invoice")
 
 	// Define client
 	client := &http.Client{}
 
-	// Define body data
-	body := url.Values{}
-	body.Set("invoiceNumber", "")
-	body.Set("contact[id]", config.ContactID)
-	body.Set("contact[objectName]", "Contact")
-	body.Set("address", config.Address)
-	body.Set("invoiceDate", config.InvoiceDate)
-	body.Set("header", config.Subject)
-	body.Set("status", config.Status)
-	body.Set("headText", config.Headtext)
-	body.Set("footText", config.FootText)
-	body.Set("invoiceType", config.InvoiceType)
-	body.Set("currency", "EUR")
-	body.Set("mapAll", "true")
-	body.Set("objectName", "Invoice")
-	body.Set("discount", "0")
-	body.Set("contactPerson[id]", config.ContactPerson)
-	body.Set("contactPerson[objectName]", "SevUser")
-	body.Set("taxType", "default")
-	body.Set("taxRate", "")
-	body.Set("taxRule[id]", "1")
-	body.Set("taxRule[objectName]", "TaxRule")
-	body.Set("taxText", "0")
-	body.Set("showNet", "false")
-	body.Set("paymentMethod[id]", config.PaymentMethodId)
-	body.Set("paymentMethod[objectName]", "PaymentMethod")
+	/*
+		// Define body data
+		body := url.Values{}
+		body.Set("invoiceNumber", "")
+		body.Set("contact[id]", config.ContactID)
+		body.Set("contact[objectName]", "Contact")
+		body.Set("address", config.Address)
+		body.Set("invoiceDate", config.InvoiceDate)
+		body.Set("header", config.Subject)
+		body.Set("status", config.Status)
+		body.Set("headText", config.Headtext)
+		body.Set("footText", config.FootText)
+		body.Set("invoiceType", config.InvoiceType)
+		body.Set("currency", "EUR")
+		body.Set("mapAll", "true")
+		body.Set("objectName", "Invoice")
+		body.Set("discount", "0")
+		body.Set("contactPerson[id]", config.ContactPerson)
+		body.Set("contactPerson[objectName]", "SevUser")
+		body.Set("taxType", "default")
+		body.Set("taxRate", "")
+		body.Set("taxRule[id]", "1")
+		body.Set("taxRule[objectName]", "TaxRule")
+		body.Set("taxText", "0")
+		body.Set("showNet", "false")
+		body.Set("paymentMethod[id]", config.PaymentMethodId)
+		body.Set("paymentMethod[objectName]", "PaymentMethod")
 
-	if config.IsEInvoice {
-		body.Set("isEInvoice", "true")
-	} else {
-		body.Set("isEInvoice", "false")
+		if config.IsEInvoice {
+			log.Println("Is e-invoice")
+			body.Set("isEInvoice", "true")
+		} else {
+			log.Println("Is not e-invoice")
+			body.Set("isEInvoice", "false")
+		}
+
+		for i, pos := range posConfigs {
+			log.Println("create position ", i, " ", pos)
+			// Convert string to float64
+			priceNet, err := strconv.ParseFloat(pos.PriceNet, 64)
+			if err != nil {
+				return NewInvoiceReturn{}, err
+			}
+
+			// Convert taxRate from string to float64
+			taxRate, err := strconv.ParseFloat(pos.TaxRate, 64)
+			if err != nil {
+				return NewInvoiceReturn{}, err
+			}
+
+			// Calc gross
+			priceGross := priceNet + (priceNet * taxRate / 100)
+
+			body.Set(fmt.Sprintf("invoicePosSave[%d][price]", i), fmt.Sprintf("%.2f", priceGross))
+			body.Set(fmt.Sprintf("invoicePosSave[%d][quantity]", i), pos.Quantity)
+			body.Set(fmt.Sprintf("invoicePosSave[%d][taxRate]", i), pos.TaxRate)
+			body.Set(fmt.Sprintf("invoicePosSave[%d][name]", i), pos.Name)
+			body.Set(fmt.Sprintf("invoicePosSave[%d][text]", i), pos.Description)
+			body.Set(fmt.Sprintf("invoicePosSave[%d][unity][id]", i), pos.UnityID)
+			body.Set(fmt.Sprintf("invoicePosSave[%d][unity][objectName]", i), "Unity")
+			body.Set(fmt.Sprintf("invoicePosSave[%d][objectName]", i), "InvoicePos")
+			body.Set(fmt.Sprintf("invoicePosSave[%d][mapAll]", i), "true")
+		}*/
+
+	body := map[string]any{}
+
+	body["invoice"] = map[string]any{
+		"invoiceNumber": "",
+		"contact": map[string]string{
+			"id":         config.ContactID,
+			"objectName": "Contact",
+		},
+		"address":     config.Address,
+		"invoiceDate": config.InvoiceDate,
+		"header":      config.Subject,
+		"status":      config.Status,
+		"headText":    config.Headtext,
+		"footText":    config.FootText,
+		"invoiceType": config.InvoiceType,
+		"currency":    "EUR",
+		"mapAll":      "true",
+		"objectName":  "Invoice",
+		"discount":    "0",
+		"contactPerson": map[string]string{
+			"id":         config.ContactPerson,
+			"objectName": "SevUser",
+		},
+		"taxType": "default",
+		"taxRate": "",
+		"taxRule": map[string]string{
+			"id":         "1",
+			"objectName": "TaxRule",
+		},
+		"taxText": "0",
+		"showNet": "false",
+		"paymentMethod": map[string]string{
+			"id":         config.PaymentMethodId,
+			"objectName": "PaymentMethod",
+		},
+		"isEInvoice": strconv.FormatBool(config.IsEInvoice),
 	}
 
-	for i, pos := range posConfigs {
+	body["invoicePosSave"] = []map[string]any{}
+
+	for _, pos := range posConfigs {
+		posBody := map[string]any{}
 		// Convert string to float64
 		priceNet, err := strconv.ParseFloat(pos.PriceNet, 64)
 		if err != nil {
-			return NewInvoiceReturn{}, err
+			return InvoiceObject{}, err
 		}
 
 		// Convert taxRate from string to float64
 		taxRate, err := strconv.ParseFloat(pos.TaxRate, 64)
 		if err != nil {
-			return NewInvoiceReturn{}, err
+			return InvoiceObject{}, err
 		}
 
 		// Calc gross
 		priceGross := priceNet + (priceNet * taxRate / 100)
 
-		body.Set(fmt.Sprintf("invoicePosSave[%d][price]", i), fmt.Sprintf("%.2f", priceGross))
-		body.Set(fmt.Sprintf("invoicePosSave[%d][quantity]", i), pos.Quantity)
-		body.Set(fmt.Sprintf("invoicePosSave[%d][taxRate]", i), pos.TaxRate)
-		body.Set(fmt.Sprintf("invoicePosSave[%d][name]", i), pos.Name)
-		body.Set(fmt.Sprintf("invoicePosSave[%d][text]", i), pos.Description)
-		body.Set(fmt.Sprintf("invoicePosSave[%d][unity][id]", i), pos.UnityID)
-		body.Set(fmt.Sprintf("invoicePosSave[%d][unity][objectName]", i), "Unity")
-		body.Set(fmt.Sprintf("invoicePosSave[%d][objectName]", i), "InvoicePos")
-		body.Set(fmt.Sprintf("invoicePosSave[%d][mapAll]", i), "true")
+		posBody["price"] = fmt.Sprintf("%.2f", priceGross)
+		posBody["quantity"] = pos.Quantity
+		posBody["taxRate"] = pos.TaxRate
+		posBody["name"] = pos.Name
+		posBody["text"] = pos.Description
+		posBody["unity"] = map[string]string{
+			"id":         pos.UnityID,
+			"objectName": "Unity",
+		}
+		posBody["objectName"] = "InvoicePos"
+		posBody["mapAll"] = "true"
+
+		body["invoicePosSave"] = append(body["invoicePosSave"].([]map[string]any), posBody)
 	}
 
-	// New http request
-	request, err := http.NewRequest("POST", buildURL("Invoice/Factory/saveInvoice"), strings.NewReader(body.Encode()))
+	//log.Println("Body: ", body)
+
+	// convert map to usable post body
+	postBody, err := json.Marshal(body)
 	if err != nil {
-		return NewInvoiceReturn{}, err
+		return InvoiceObject{}, err
 	}
 
-	//log.Println("Request created")
+	//log.Println("Post body: ", string(postBody))
+
+	// New http request with body
+	request, err := http.NewRequest("POST", buildURL("Invoice/Factory/saveInvoice"), strings.NewReader(string(postBody)))
+	if err != nil {
+		return InvoiceObject{}, err
+	}
+
+	//log.Println("Request created", request)
 
 	// Set header
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", config.Token)
 
 	// Response to sevDesk
 	response, err := client.Do(request)
 	if err != nil {
-		return NewInvoiceReturn{}, err
+		return InvoiceObject{}, err
 	}
 
-	//log.Println("Response received")
+	// if status code not 201, return error
+	if response.StatusCode != 201 {
+		log.Println("Response: ", response)
+		return InvoiceObject{}, fmt.Errorf("status code not 201, got %d", response.StatusCode)
+	}
+
+	//log.Println("Response received", response)
 
 	// Close response
 	defer response.Body.Close()
@@ -571,14 +666,11 @@ func NewInvoice(config Invoice, posConfigs []Position) (NewInvoiceReturn, error)
 
 	err = json.NewDecoder(response.Body).Decode(&decode)
 	if err != nil {
-		return NewInvoiceReturn{}, err
+		return InvoiceObject{}, err
 	}
 
-	//log.Println("Decode: ", decode)
-
 	// Return data
-	return decode, nil
-
+	return decode.Objects.Invoice, nil
 }
 
 // SendInvoiceEmail to send an invoice by mail
@@ -587,30 +679,49 @@ func SendInvoiceEmail(config InvoiceEmail) (SendInvoiceEmailReturn, error) {
 	// Define client
 	client := &http.Client{}
 
-	// Define body data
-	body := url.Values{}
-	body.Set("toEmail", config.Email)
-	body.Set("subject", config.Subject)
-	body.Set("text", config.Text)
-	body.Set("copy", "false")
-	body.Set("additionalAttachments", "null")
-	body.Set("ccEmail", config.CC)
-	body.Set("bccEmail", config.BCC)
+	/*
+		// Define body data
+		body := url.Values{}
+		body.Set("toEmail", config.Email)
+		body.Set("subject", config.Subject)
+		body.Set("text", config.Text)
+		body.Set("copy", "false")
+		body.Set("additionalAttachments", "null")
+		body.Set("ccEmail", config.CC)
+		body.Set("bccEmail", config.BCC)
 
-	if config.SendOnlyXML {
-		body.Set("sendXml", "true")
-	} else {
-		body.Set("sendXml", "false")
+		if config.SendOnlyXML {
+			body.Set("sendXml", "true")
+		} else {
+			body.Set("sendXml", "false")
+		}*/
+
+	body := map[string]any{
+		"toEmail":               config.Email,
+		"subject":               config.Subject,
+		"text":                  config.Text,
+		"copy":                  "false",
+		"additionalAttachments": "null",
+		"ccEmail":               config.CC,
+		"bccEmail":              config.BCC,
+		"sendXml":               strconv.FormatBool(config.SendOnlyXML),
 	}
 
+	postBody, err := json.Marshal(body)
+	if err != nil {
+		return SendInvoiceEmailReturn{}, err
+	}
+
+	//log.Println("Post body: ", string(postBody))
+
 	// New http request
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/Invoice/%s/sendViaEmail", ApiURL, config.ID), strings.NewReader(body.Encode()))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/Invoice/%s/sendViaEmail", ApiURL, config.ID), strings.NewReader(string(postBody)))
 	if err != nil {
 		return SendInvoiceEmailReturn{}, err
 	}
 
 	// Set header
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", config.Token)
 
 	// Response to sevDesk
